@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { nanoid } = require('nanoid');
+const crypto = require('crypto');
+function generateKey(len = 16) { return crypto.randomBytes(Math.ceil(len/2)).toString('hex').slice(0, len); }
 
 function now() { return Date.now(); }
 
@@ -74,7 +75,7 @@ class KeysStore {
   }
 
   async create({ monthly_quota_seconds } = {}) {
-    const key = nanoid(16);
+    const key = generateKey(16);
     const ts = now();
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const obj = { key, created_at: ts, active: 1, monthly_quota_seconds: monthly_quota_seconds || 2592000, usage_seconds: 0, month_start: monthStart };

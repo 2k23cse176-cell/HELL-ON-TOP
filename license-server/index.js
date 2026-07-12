@@ -1,7 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { nanoid } = require('nanoid');
+const crypto = require('crypto');
+function generateKey(len = 16) { return crypto.randomBytes(Math.ceil(len/2)).toString('hex').slice(0, len); }
 const dbModule = require('./db');
 const path = require('path');
 
@@ -28,7 +29,7 @@ async function start() {
       return res.json({ key: obj.key });
     }
 
-    const key = nanoid(16);
+    const key = generateKey(16);
     const ts = Date.now();
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     await db.run(
