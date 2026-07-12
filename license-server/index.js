@@ -151,6 +151,7 @@ async function start() {
     res.json({ ok: true });
   });
 
+  app.get('/', (req, res) => res.redirect('/admin.html'));
   app.use(express.static(path.join(__dirname, 'public')));
 
   const port = process.env.PORT || 3000;
