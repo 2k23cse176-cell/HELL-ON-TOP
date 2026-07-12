@@ -14,14 +14,48 @@
     </div>
     <div>
       <h3>Keys</h3>
-      <pre id="keys">Loading...</pre>
+      <table id="keys-table" border="1" cellpadding="6" style="border-collapse:collapse;width:100%">
+        <thead><tr><th>Key</th><th>Active</th><th>Usage</th><th>Quota</th><th>Bound To</th><th>Created</th><th>Actions</th></tr></thead>
+        <tbody id="keys-body"><tr><td colspan="7">Loading...</td></tr></tbody>
+      </table>
     </div>
 
     <script>
       async function loadKeys(){
         const res = await fetch('/api/keys');
         const j = await res.json();
-        document.getElementById('keys').textContent = JSON.stringify(j.keys, null, 2);
+        const tb = document.getElementById('keys-body');
+        tb.innerHTML = '';
+        (j.keys||[]).forEach(k=>{
+          const tr = document.createElement('tr');
+          const created = new Date((k.created_at||k.created_at*1)||0);
+          tr.innerHTML = `<td style="font-family:monospace">${k.key}</td>
+            <td>${k.active? 'Yes' : 'No'}</td>
+            <td>${k.usage_seconds||0}</td>
+            <td>${k.monthly_quota_seconds||0}</td>
+            <td>${k.bound_to||''}</td>
+            <td>${created.toLocaleString()}</td>
+            <td>
+              <button data-act="suspend" data-key="${k.key}">Suspend</button>
+              <button data-act="resume" data-key="${k.key}">Resume</button>
+              <button data-act="unclaim" data-key="${k.key}">Unbind</button>
+              <button data-act="delete" data-key="${k.key}">Delete</button>
+            </td>`;
+          tb.appendChild(tr);
+        });
+        tb.querySelectorAll('button').forEach(b=>b.addEventListener('click', async (e)=>{
+          const act = b.getAttribute('data-act');
+          const key = b.getAttribute('data-key');
+          if(!confirm(act+ ' key? '+ key)) return;
+          let url = '/api/keys/' + (act==='delete' ? 'delete' : act);
+          if(act==='unclaim') url = '/api/keys/unclaim';
+          const body = { key };
+          if(act==='unclaim') body.clientId = prompt('ClientId (leave empty to force):') || '';
+          const r = await fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+          const j2 = await r.json();
+          alert(JSON.stringify(j2));
+          loadKeys();
+        }));
       }
       document.getElementById('create').addEventListener('click', async ()=>{
         const q = parseInt(document.getElementById('quota').value) || undefined;
