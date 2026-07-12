@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>License Admin</title>
+    <style>body{font-family:Arial;padding:20px}input,button{padding:8px;margin:4px}</style>
+  </head>
+  <body>
+    <h2>License Admin</h2>
+    <div>
+      <label>Monthly quota seconds (default 2592000 = 720h):</label>
+      <input id="quota" placeholder="2592000" />
+      <button id="create">Create Key</button>
+    </div>
+    <div>
+      <h3>Keys</h3>
+      <pre id="keys">Loading...</pre>
+    </div>
+
+    <script>
+      async function loadKeys(){
+        const res = await fetch('/api/keys');
+        const j = await res.json();
+        document.getElementById('keys').textContent = JSON.stringify(j.keys, null, 2);
+      }
+      document.getElementById('create').addEventListener('click', async ()=>{
+        const q = parseInt(document.getElementById('quota').value) || undefined;
+        const res = await fetch('/api/keys/create', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({monthly_quota_seconds:q})});
+        const j = await res.json();
+        alert('Created: '+(j.key||JSON.stringify(j)));
+        loadKeys();
+      });
+      loadKeys();
+    </script>
+  </body>
+</html>
