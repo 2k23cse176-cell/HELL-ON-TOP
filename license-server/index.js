@@ -41,6 +41,40 @@ async function start() {
     res.json({ key });
   });
 
+  app.post('/api/keys/delete', async (req, res) => {
+    const { key } = req.body || {};
+    if (!key) return res.status(400).json({ error: 'missing key' });
+    if (keysStore.enabled()) {
+      const ok = await keysStore.delete(key);
+      return res.json({ ok });
+    }
+    await db.run('DELETE FROM keys WHERE key = ?', key);
+    res.json({ ok: true });
+  });
+
+  app.post('/api/keys/claim', async (req, res) => {
+    const { key, clientId } = req.body || {};
+    if (!key || !clientId) return res.status(400).json({ error: 'missing key or clientId' });
+    if (keysStore.enabled()) {
+      const r = await keysStore.claim(key, clientId);
+      return res.json(r);
+    }
+    const row = await db.get('SELECT * FROM keys WHERE key = ?', key);
+    if (!row) return res.status(404).json({ ok: false, error: 'not_found' });
+    // For DB mode, use usage_events table for binding? Simpler: use keys table add column 'bound_to' not supported here.
+    return res.status(501).json({ ok: false, error: 'not_implemented_db_mode' });
+  });
+
+  app.post('/api/keys/unclaim', async (req, res) => {
+    const { key, clientId } = req.body || {};
+    if (!key || !clientId) return res.status(400).json({ error: 'missing key or clientId' });
+    if (keysStore.enabled()) {
+      const r = await keysStore.unclaim(key, clientId);
+      return res.json(r);
+    }
+    return res.status(501).json({ ok: false, error: 'not_implemented_db_mode' });
+  });
+
   app.post('/api/keys/validate', async (req, res) => {
     const { key } = req.body || {};
     if (!key) return res.status(400).json({ error: 'missing key' });

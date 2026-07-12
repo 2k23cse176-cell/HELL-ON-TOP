@@ -41,6 +41,38 @@ class KeysStore {
 
   getByKey(key) { return this.keys.find(k => k.key === key); }
 
+  async delete(key) {
+    const idx = this.keys.findIndex(k => k.key === key);
+    if (idx === -1) return false;
+    this.keys.splice(idx, 1);
+    await this._persist();
+    return true;
+  }
+
+  async claim(key, clientId) {
+    const k = this.getByKey(key);
+    if (!k) return { ok: false, error: 'not_found' };
+    if (!k.bound_to) {
+      k.bound_to = clientId;
+      await this._persist();
+      return { ok: true, bound: clientId };
+    }
+    if (k.bound_to === clientId) return { ok: true, bound: clientId };
+    return { ok: false, error: 'already_bound', bound: k.bound_to };
+  }
+
+  async unclaim(key, clientId) {
+    const k = this.getByKey(key);
+    if (!k) return { ok: false, error: 'not_found' };
+    if (!k.bound_to) return { ok: true };
+    if (k.bound_to === clientId) {
+      delete k.bound_to;
+      await this._persist();
+      return { ok: true };
+    }
+    return { ok: false, error: 'bound_to_other', bound: k.bound_to };
+  }
+
   async create({ monthly_quota_seconds } = {}) {
     const key = nanoid(16);
     const ts = now();

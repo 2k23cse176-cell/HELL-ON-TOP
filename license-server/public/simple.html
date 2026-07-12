@@ -10,6 +10,10 @@
     <p>Click to create a key. Backend will return the new key string.</p>
     <button id="create">Create Key</button>
     <div id="key">No key yet</div>
+    <h3>Delete a key</h3>
+    <input id="delkey" placeholder="paste key to delete" style="width:60%" />
+    <button id="delete">Delete Key</button>
+    <div id="delres"></div>
 
     <script>
       document.getElementById('create').addEventListener('click', async ()=>{
@@ -21,7 +25,16 @@
         } else {
           document.getElementById('key').textContent = JSON.stringify(j);
         }
+        document.getElementById('delres').textContent = '';
       });
+
+        document.getElementById('delete').addEventListener('click', async ()=>{
+          const k = document.getElementById('delkey').value.trim();
+          if(!k) return alert('enter key');
+          const res = await fetch('/api/keys/delete', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({key:k})});
+          const j = await res.json();
+          document.getElementById('delres').textContent = JSON.stringify(j);
+        });
     </script>
   </body>
 </html>
