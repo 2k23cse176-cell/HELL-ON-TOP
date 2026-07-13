@@ -40,7 +40,10 @@
                         document.getElementById('hot-license-msg').textContent = r && r.error ? r.error : 'Key invalid or suspended';
                     }
                 };
-                document.getElementById('hot-license-cancel').onclick = ()=>{ document.getElementById(OVERLAY_ID).remove(); };
+                document.getElementById('hot-license-cancel').onclick = ()=>{
+                    document.getElementById('hot-license-msg').textContent = 'Extension disabled until a valid key is entered.';
+                    state.enabled = false; try{ pushState(); }catch(e){}
+                };
             }
 
             let heartbeatTimer = null;

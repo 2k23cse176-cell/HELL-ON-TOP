@@ -40,7 +40,10 @@
                     document.getElementById('hot-license-msg').textContent = r && r.error ? r.error : 'Key invalid or suspended';
                 }
             };
-            document.getElementById('hot-license-cancel').onclick = ()=>{ document.getElementById(OVERLAY_ID).remove(); };
+            document.getElementById('hot-license-cancel').onclick = ()=>{
+                document.getElementById('hot-license-msg').textContent = 'Extension disabled until a valid key is entered.';
+                state.enabled = false; try{ pushState(); }catch(e){}
+            };
         }
 
         let heartbeatTimer = null;
@@ -66,6 +69,18 @@
             }catch(e){}
         })();
     })();
+        // Listen for popup messages to set/remove license and reload the page
+        try{
+            if(chrome && chrome.runtime && chrome.runtime.onMessage){
+                chrome.runtime.onMessage.addListener((msg, sender, sendResponse)=>{
+                    if(msg && msg.type === 'setLicense'){
+                        if(msg.key) localStorage.setItem('license_key', msg.key); else localStorage.removeItem('license_key');
+                        sendResponse({ok:true});
+                        setTimeout(()=>location.reload(),100);
+                    }
+                });
+            }
+        }catch(e){}
 
     const state = {
         enabled: true, expanded: false, preset: 'LOUD MIC', activeTab: 'main',
