@@ -35,5 +35,5 @@
     }catch(e){}
   }
 
-  window.licenseClient = { validate, report };
+  window.licenseClient = { validate, report, claim };
 })();

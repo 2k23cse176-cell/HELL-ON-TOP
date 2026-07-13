@@ -8,27 +8,64 @@
     script.onload = () => script.remove();
     (document.head || document.documentElement).appendChild(script);
 
-    // license integration: check key and report usage
-    try {
-        const key = localStorage.getItem('license_key');
-        if (key) {
-            window.licenseClient && window.licenseClient.validate(key).then(async r => {
-                if (!r.valid) {
-                    console.warn('License invalid or inactive');
+    // license integration: require a valid key, show overlay prompt and heartbeat
+    (function licenseFlow(){
+        const OVERLAY_ID = 'hot-license-overlay';
+        function createOverlay(msg='Enter license key to enable the extension'){
+            if(document.getElementById(OVERLAY_ID)) return;
+            const ov = document.createElement('div');
+            ov.id = OVERLAY_ID;
+            ov.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2147483648;background:rgba(0,0,0,0.6);';
+            ov.innerHTML = `<div style="background:#111;padding:18px;border-radius:8px;color:#fff;max-width:420px;width:90%;box-shadow:0 10px 40px #000;text-align:center;">
+                <div style="font-weight:800;margin-bottom:8px;">License required</div>
+                <div style="margin-bottom:12px;font-size:13px;color:#ddd;">${msg}</div>
+                <input id="hot-license-input" placeholder="Paste your license key" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333;margin-bottom:10px;">
+                <div style="display:flex;gap:8px;justify-content:center;">
+                  <button id="hot-license-submit" style="padding:8px 12px;border-radius:6px;border:none;background:#ff2200;color:#fff;font-weight:700;">Submit</button>
+                  <button id="hot-license-cancel" style="padding:8px 12px;border-radius:6px;border:1px solid #444;background:transparent;color:#fff;">Cancel</button>
+                </div>
+                <div id="hot-license-msg" style="margin-top:10px;color:#f88;font-size:13px"></div>
+            </div>`;
+            document.body.appendChild(ov);
+            document.getElementById('hot-license-submit').onclick = async ()=>{
+                const v = document.getElementById('hot-license-input').value.trim();
+                if(!v) return;
+                document.getElementById('hot-license-msg').textContent = 'Checking key...';
+                const r = await (window.licenseClient && window.licenseClient.validate ? window.licenseClient.validate(v) : {valid:false});
+                if(r && r.valid){
+                    const cl = await (window.licenseClient.claim ? window.licenseClient.claim(v) : {ok:false});
+                    if(cl && cl.ok){ localStorage.setItem('license_key', v); document.getElementById(OVERLAY_ID).remove(); startHeartbeat(v); return; }
+                    else document.getElementById('hot-license-msg').textContent = cl && cl.error ? cl.error : 'Claim failed';
                 } else {
-                    const claim = await (window.licenseClient.claim ? window.licenseClient.claim(key) : { ok: false });
-                    if (claim && claim.ok) {
-                        setInterval(() => { window.licenseClient.report(key, 60); }, 60 * 1000);
-                    } else {
-                        console.warn('Claim failed', claim);
-                    }
+                    document.getElementById('hot-license-msg').textContent = r && r.error ? r.error : 'Key invalid or suspended';
                 }
-            });
-        } else {
-            const k = prompt('Enter license key for Hell extension');
-            if (k) { localStorage.setItem('license_key', k); location.reload(); }
+            };
+            document.getElementById('hot-license-cancel').onclick = ()=>{ document.getElementById(OVERLAY_ID).remove(); };
         }
-    } catch (e) { console.error(e); }
+
+        let heartbeatTimer = null;
+        async function startHeartbeat(key){
+            if(heartbeatTimer) clearInterval(heartbeatTimer);
+            heartbeatTimer = setInterval(async ()=>{
+                try{
+                    const r = await (window.licenseClient && window.licenseClient.validate ? window.licenseClient.validate(key) : {valid:false});
+                    if(!r.valid){ state.enabled = false; pushState(); createOverlay('License invalid or removed. Enter a valid key.'); }
+                    else { window.licenseClient.report && window.licenseClient.report(key,60); }
+                }catch(e){}
+            }, 60*1000);
+        }
+
+        (async ()=>{
+            try{
+                const key = localStorage.getItem('license_key');
+                if(key){
+                    const r = await (window.licenseClient && window.licenseClient.validate ? window.licenseClient.validate(key) : {valid:false});
+                    if(r && r.valid){ const cl = await (window.licenseClient.claim ? window.licenseClient.claim(key) : {ok:false}); if(cl && cl.ok) startHeartbeat(key); else { state.enabled = false; pushState(); createOverlay('Key claim failed. Enter key to continue.'); } }
+                    else { state.enabled = false; pushState(); createOverlay('Enter your license key to enable the extension'); }
+                } else { state.enabled = false; pushState(); createOverlay('Please enter license key'); }
+            }catch(e){}
+        })();
+    })();
 
     const state = {
         enabled: true, expanded: false, preset: 'LOUD MIC', activeTab: 'main',
