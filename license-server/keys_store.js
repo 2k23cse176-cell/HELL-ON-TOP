@@ -17,9 +17,9 @@ class KeysStore {
         console.warn('LICENSE_KEYS is not valid JSON array');
       }
     }
-
-    if (!this.mode && process.env.KEYS_FILE) {
-      this.file = path.resolve(process.env.KEYS_FILE);
+    // If a KEYS_FILE is provided, use it. Otherwise default to a local keys.json file
+    if (!this.mode) {
+      this.file = path.resolve(process.env.KEYS_FILE || path.join(process.cwd(), 'keys.json'));
       this.mode = 'file';
       try {
         if (fs.existsSync(this.file)) {
@@ -30,7 +30,7 @@ class KeysStore {
           fs.writeFileSync(this.file, JSON.stringify(this.keys, null, 2));
         }
       } catch (e) {
-        console.error('Failed to read KEYS_FILE', e);
+        console.error('Failed to read or create keys file', e);
         this.keys = [];
       }
     }

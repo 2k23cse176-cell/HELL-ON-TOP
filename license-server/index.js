@@ -14,7 +14,13 @@ let db;
 const keysStore = require('./keys_store');
 
 async function start() {
-  db = await dbModule.init();
+  // If a file-backed or env-backed keys store is enabled, skip initializing a DB.
+  if (!keysStore.enabled()) {
+    db = await dbModule.init();
+  } else {
+    db = null;
+    console.log('Keys store enabled (file or env). Running in DB-free mode.');
+  }
 
   app.get('/api/keys', async (req, res) => {
     if (keysStore.enabled()) return res.json({ keys: keysStore.all() });
