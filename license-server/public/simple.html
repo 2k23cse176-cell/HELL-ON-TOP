@@ -8,6 +8,7 @@
   <body>
     <h2>Create License Key</h2>
     <p>Click to create a key. Backend will return the new key string.</p>
+    <label><input type="checkbox" id="unlimited"> Unlimited quota</label>
     <button id="create">Create Key</button>
     <div id="key">No key yet</div>
     <h3>Delete a key</h3>
@@ -17,7 +18,9 @@
 
     <script>
       document.getElementById('create').addEventListener('click', async ()=>{
-        const res = await fetch('/api/keys/create', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({})});
+        const unlimited = document.getElementById('unlimited').checked;
+        const body = unlimited ? { monthly_quota_seconds: 0 } : {};
+        const res = await fetch('/api/keys/create', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
         const j = await res.json();
         if(j.key){
           document.getElementById('key').textContent = j.key;

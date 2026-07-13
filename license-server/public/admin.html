@@ -10,6 +10,7 @@
     <div>
       <label>Monthly quota seconds (default 2592000 = 720h):</label>
       <input id="quota" placeholder="2592000" />
+      <label style="margin-left:12px"><input type="checkbox" id="unlimited"> Unlimited</label>
       <button id="create">Create Key</button>
     </div>
     <div>
@@ -32,7 +33,7 @@
           tr.innerHTML = `<td style="font-family:monospace">${k.key}</td>
             <td>${k.active? 'Yes' : 'No'}</td>
             <td>${k.usage_seconds||0}</td>
-            <td>${k.monthly_quota_seconds||0}</td>
+            <td>${(k.monthly_quota_seconds===0) ? 'Unlimited' : (k.monthly_quota_seconds||0)}</td>
             <td>${k.bound_to||''}</td>
             <td>${created.toLocaleString()}</td>
             <td>
@@ -58,8 +59,9 @@
         }));
       }
       document.getElementById('create').addEventListener('click', async ()=>{
-        const q = parseInt(document.getElementById('quota').value) || undefined;
-        const res = await fetch('/api/keys/create', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({monthly_quota_seconds:q})});
+        const unlimited = document.getElementById('unlimited').checked;
+        const q = unlimited ? 0 : (parseInt(document.getElementById('quota').value) || undefined);
+          const res = await fetch('/api/keys/create', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({monthly_quota_seconds:q})});
         const j = await res.json();
         alert('Created: '+(j.key||JSON.stringify(j)));
         loadKeys();

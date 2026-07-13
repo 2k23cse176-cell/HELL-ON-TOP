@@ -78,7 +78,9 @@ class KeysStore {
     const key = generateKey(16);
     const ts = now();
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-    const obj = { key, created_at: ts, active: 1, monthly_quota_seconds: monthly_quota_seconds || 2592000, usage_seconds: 0, month_start: monthStart };
+    // Treat 0 as unlimited (no quota). Default is 2592000 seconds (30 days) if not provided.
+    const quota = (typeof monthly_quota_seconds === 'number') ? monthly_quota_seconds : 2592000;
+    const obj = { key, created_at: ts, active: 1, monthly_quota_seconds: quota, usage_seconds: 0, month_start: monthStart };
     this.keys.push(obj);
     await this._persist();
     return obj;
@@ -90,7 +92,8 @@ class KeysStore {
     const monthStartNow = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     if (!k.month_start || k.month_start < monthStartNow) { k.usage_seconds = 0; k.month_start = monthStartNow; }
     k.usage_seconds = (k.usage_seconds || 0) + Number(seconds || 0);
-    if (k.usage_seconds >= k.monthly_quota_seconds) k.active = 0;
+    // If monthly_quota_seconds is 0 => unlimited, do not auto-disable
+    if (k.monthly_quota_seconds > 0 && k.usage_seconds >= k.monthly_quota_seconds) k.active = 0;
     await this._persist();
     return k;
   }
